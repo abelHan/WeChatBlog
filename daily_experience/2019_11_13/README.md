@@ -8,7 +8,7 @@
 
 [官方例子+SDK](https://developer.amazon.com/zh/apps-and-games/sdk-download)
 
-[测试流程](,/Amazon App Tester工具的操作流程.docx)
+[测试流程](./Amazon App Tester工具的操作流程.docx)
 
 [api说明]( https://developer.amazon.com/zh/docs/in-app-purchasing/iap-implement-iap.html )
 
@@ -111,60 +111,3 @@ adb push D:/work/Amazon-Android-SDKs/AmazonInAppPurchasing/examples/SampleIAPEnt
 
 adb push D:/work/Amazon-Android-SDKs/AmazonInAppPurchasing/examples/SampleIAPSubscriptionsApp/amazon.sdktester.json /mnt/sdcard/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-开源链接
-
-[url_github] : ( https://github.com/EmmyLua )
-
-[url_doc] : ( https://emmylua.github.io/ )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-[url_github]: 
