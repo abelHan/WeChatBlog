@@ -1,6 +1,6 @@
 # Amazon 内购充值记录
 
-
+官方的资料如下，还是很全的。
 
 [官方文档说明](https://developer.amazon.com/zh/docs/in-app-purchasing/iap-overview.html)
 
@@ -12,24 +12,186 @@
 
 [api说明]( https://developer.amazon.com/zh/docs/in-app-purchasing/iap-implement-iap.html )
 
+### 综述
 
+应用内购买（IAP），Amazon支持Android应用和Web应用，这里只介绍Android应用。
 
-
-
-
-
-可购买项目的类型
-IAP 包括三种不同类别的可购买项目：
+Amazon IAP 可以购买一下三种不同类别的项目：
 
 消费品： 先进行购买，然后在应用中使用，如额外生命、额外移动或游戏内货币。可多次购买。
 权利： 一次性购买，用于允许访问应用或游戏中的功能或内容。
 订阅： 允许访问一组高级内容或功能有限的一段时间。
 
+---
+
+### 集成
+
+获取用户数据
+
+获取产品数据
+
+购买请求
+
+购买更新请求
+
+NotifyFulfillment
+
+验证收据 (RVS)（服务端集成，跳过）
+
+---
+
+#### 获取用户数据
+
+ Amazon Appstore 和 App Tester 工具都通过用户 ID 来跟踪事务 ，建议在Android的生命周期方法*onResume*中检查数据。
+
+```java
+// 调用
+PurchasingService.getUserData()
+// 处理响应 PurchasingListener
+@Override
+public void onUserDataResponse(final UserDataResponse response) {
+    Log.d(TAG, "onGetUserDataResponse: requestId (" + response.getRequestId()
+          + ") userIdRequestStatus: "
+          + response.getRequestStatus()
+          + ")");
+
+    final UserDataResponse.RequestStatus status = response.getRequestStatus();
+    switch (status) {
+        case SUCCESSFUL:
+            break;
+        case FAILED:
+            break;
+        case NOT_SUPPORTED:
+            break;
+    }
+}
+```
+
+---
+
+#### 获取产品数据
+
+ App Tester 将在 DEFAULT 模式下从 JSON 文件返回产品数据 ，可以在购买产品时检查。可以在生命周期方法*onStart*中调用
+
+```java
+// 调用
+Log.d(TAG, "onStart: call getProductData for skus: " + MySku.values());
+final Set<String> productSkus = new HashSet<String>();
+for (final MySku mySku : MySku.values()) {
+    productSkus.add(mySku.getSku());
+}
+PurchasingService.getProductData(productSkus);
+
+//处理响应 PurchasingListener
+@Override
+public void onProductDataResponse(final ProductDataResponse response) {
+    final ProductDataResponse.RequestStatus status = response.getRequestStatus();
+    Log.d(TAG, "onProductDataResponse: RequestStatus (" + status + ")");
+
+    switch (status) {
+        case SUCCESSFUL:
+            break;
+        case FAILED:
+            break;
+        case NOT_SUPPORTED:
+            break;
+    }
+}
+```
+
+---
+
+#### 购买请求
+
+重头戏来了
+
+```java
+//调用
+final RequestId requestId = PurchasingService.purchase(productId);
+Log.d(LOG_TAG, "requestId (" + requestId + ")");
+//处理响应 PurchasingListener
+@Override
+public void onPurchaseResponse(final PurchaseResponse response) {
+    final String requestId = response.getRequestId().toString();
+    final String userId = response.getUserData().getUserId();
+    final PurchaseResponse.RequestStatus status = response.getRequestStatus();
+    Log.d(TAG, "onPurchaseResponse: requestId (" + requestId
+          + ") userId ("
+          + userId
+          + ") purchaseRequestStatus ("
+          + status
+          + ")");
+
+    switch (status) {
+        case SUCCESSFUL:
+            break;
+        case ALREADY_PURCHASED:
+            break;
+        case FAILED:
+            break;
+        case NOT_SUPPORTED:
+            break;
+    }
+
+}
+
+```
+
+---
+
+#### 购买更新请求
+
+ 为确保用户可访问其正确内容，请在您的应用开始与该用户交互时调用购买更新请求 API（在 Android 生命周期的 `onResume` 方法中）。 
+
+```java
+//调用
+PurchasingService.getPurchaseUpdates(false);
+//处理响应 PurchasingListener
+@Override
+public void onPurchaseUpdatesResponse(final PurchaseUpdatesResponse response) {
+    Log.d(TAG, "onPurchaseUpdatesResponse: requestId (" + response.getRequestId()
+          + ") purchaseUpdatesResponseStatus ("
+          + response.getRequestStatus()
+          + ") userId ("
+          + response.getUserData().getUserId()
+          + ")");
+    final PurchaseUpdatesResponse.RequestStatus status = response.getRequestStatus();
+    switch (status) {
+        case SUCCESSFUL:
+            for (final Receipt receipt : response.getReceipts()) {
+                //TODO
+            }
+            if (response.hasMore()) {
+                PurchasingService.getPurchaseUpdates(false);
+            }
+
+            break;
+        case FAILED:
+        case NOT_SUPPORTED:
+            break;
+    }
+
+}
+```
+
+---
+
+#### NotifyFulfillment
+
+ 调用通知履行 API 来验证履行并测试 IAP 中的可用收据状态。您可以使用以下工作流程来测试消费品或权利项目的履行。 
+
+```java
+//调用 notifyFullfilment：
+//要测试“已履行”条件，请将 notifyFulfillment 设置为 SUCCESSFUL。
+//要测试“不可用”条件，请将 notifyFulfillment 设置为 UNAVAILABLE。
+PurchasingService.notifyFulfillment(receiptId, FulfillmentResult.FULFILLED);
+```
 
 
 
+---
 
-## 关于 Android IAP 程序包
+### 关于 Android IAP 程序包
 
 `com.amazon.device.iap` 程序包提供了用于在 Android 应用中实现应用内购买的类和界面。
 
@@ -97,17 +259,23 @@ IAP 包括三种不同类别的可购买项目：
 - `ProductDataResponse`： 提供以 SKU 为键的项目数据。`getUnavailableSkus()` 方法列出不可用的任何 SKU。
 - `PurchaseResponse`： 提供在您的应用内发起的购买的状态。请注意，`PurchaseResponse.RequestStatus` 结果为 FAILED 可能只表示用户在完成之前取消了购买。
 
+---
 
+### 应用测试步骤：
 
+（1）下载Amazon AppStore 应用商店； 
 
+（2）去亚马逊应用商品发布界面下载商品列表json文件；
 
+（3）在 Android 移动设备上，启动 Amazon Appstore 应用，搜索Amazon App Tester应用并且安装；
 
+（4）获取JSON数据文件并且文件命名为“amazon.sdktester.json，将该文件复制至设备文件系统中的 /mnt/sdcard/ 文件夹；
 
-adb push D:/work/Amazon-Android-SDKs/AmazonInAppPurchasing/examples/SampleIAPEntitlementsApp/amazon.sdktester.json /mnt/sdcard/
+```
+adb push [Your_JSON_File_Folder]/amazon.sdktester.json /mnt/sdcard/
+```
 
+（5）打开 Amazon App Tester选择IAP Items in JSON File查看json文件拷贝路径是否正确，有文件则正确；
 
-
-
-
-adb push D:/work/Amazon-Android-SDKs/AmazonInAppPurchasing/examples/SampleIAPSubscriptionsApp/amazon.sdktester.json /mnt/sdcard/
+（6）.以上步骤都完成了,就可以开始测试应用内购了。
 
